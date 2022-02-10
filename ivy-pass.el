@@ -152,29 +152,31 @@ SEQUENCE is a list of the following elements:
 (defvar ivy-pass-history nil
   "History for `ivy-pass'")
 
-(defmacro ivy-pass--sequence-type-action (sequence)
-  `(lambda (entry-name)
-     (ivy-pass--async-commands
-      (ivy-pass--get-commands
-       entry-name
-       ,sequence))))
+(defmacro ivy-pass--define-sequence-funcs (sequence sequence-name)
+  `(progn
+     (defun ,(intern (format "ivy-pass--type-%s-command" sequence-name)) ()
+       (interactive)
+       (ivy-exit-with-action
+        (lambda (entry-name)
+          (ivy-pass--async-commands
+           (ivy-pass--get-commands entry-name sequence)))))
+     (defun ,(intern (format "ivy-pass--type-%s-action" sequence-name)) (entry-name)
+       (ivy-pass--async-commands
+        (ivy-pass--get-commands
+         entry-name
+         ,sequence)))))
 
-(defmacro ivy-pass--def-sequence-type (sequence sequence-name)
-  `(defun ,(intern (format "ivy-pass--type-%s" sequence-name)) ()
-     (interactive)
-     (ivy-exit-with-action
-      ,(ivy-pass--sequence-type-action sequence))))
+(ivy-pass--define-sequence-funcs ivy-pass-autotype "autotype")
+(ivy-pass--define-sequence-funcs ivy-pass-password "password")
+(ivy-pass--define-sequence-funcs ivy-pass-username "username")
+(ivy-pass--define-sequence-funcs ivy-pass-url "url")
 
 (defvar ivy-pass-map
   (let ((map (make-sparse-keymap)))
-    (define-key map (kbd "M-a")
-      (ivy-pass--def-sequence-type ivy-pass-autotype "autotype"))
-    (define-key map (kbd "M-p")
-      (ivy-pass--def-sequence-type ivy-pass-password "password"))
-    (define-key map (kbd "M-u")
-      (ivy-pass--def-sequence-type ivy-pass-username "username"))
-    (define-key map (kbd "M-U")
-      (ivy-pass--def-sequence-type ivy-pass-url "url"))
+    (define-key map (kbd "M-a") #'ivy-pass--type-autotype-command)
+    (define-key map (kbd "M-p") #'ivy-pass--type-password-command)
+    (define-key map (kbd "M-u") #'ivy-pass--type-username-command)
+    (define-key map (kbd "M-U") #'ivy-pass--type-url-command)
     map))
 
 ;;;###autoload
@@ -185,7 +187,11 @@ SEQUENCE is a list of the following elements:
             :require-match t
             :history 'ivy-pass-history
             :keymap ivy-pass-map
-            :action (ivy-pass--sequence-type-action ivy-pass-password)
+            :action '(1
+                      ("p" ivy-pass--type-password-action "password")
+                      ("a" ivy-pass--type-autotype-action "autotype")
+                      ("u" ivy-pass--type-username-action "username")
+                      ("U" ivy-pass--type-url-action "url"))
             :caller #'ivy-pass))
 
 (provide 'ivy-pass)
