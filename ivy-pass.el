@@ -105,10 +105,11 @@ Call CALLBACK when the last command is executed."
 (defun ivy-pass--get-type-command (str)
   "Return a command to type STR."
   (concat
-   "printf \""
+   "printf "
    (shell-quote-argument str)
-   "\" | xdotool type --clearmodifiers --file - --delay "
+   "| xdotool type --clearmodifiers --file - --delay "
    (number-to-string ivy-pass-delay)))
+
 
 (defun ivy-pass--get-wait-command (&optional miliseconds)
   "Return a command to sleep for `ivy-pass-initial-wait'."
@@ -159,7 +160,7 @@ SEQUENCE is a list of the following elements:
        (ivy-exit-with-action
         (lambda (entry-name)
           (ivy-pass--async-commands
-           (ivy-pass--get-commands entry-name sequence)))))
+           (ivy-pass--get-commands entry-name ,sequence)))))
      (defun ,(intern (format "ivy-pass--type-%s-action" sequence-name)) (entry-name)
        (ivy-pass--async-commands
         (ivy-pass--get-commands
