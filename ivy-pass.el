@@ -1,11 +1,11 @@
-;;; org-journal-tags.el --- TODO -*- lexical-binding: t -*-
+;;; ivy-pass.el --- A simple pass frontend for Ivy -*- lexical-binding: t -*-
 
 ;; Copyright (C) 2022 Korytov Pavel
 
 ;; Author: Korytov Pavel <thexcloud@gmail.com>
 ;; Maintainer: Korytov Pavel <thexcloud@gmail.com>
 ;; Version: 0.1.0
-;; Package-Requires: ((emacs "27.1") ("ivy" 0.13.0))
+;; Package-Requires: ((emacs "27.1") (ivy "0.13.0"))
 ;; Homepage: https://github.com/SqrtMinusOne/org-journal-tags.el
 
 ;; This file is NOT part of GNU Emacs.
@@ -25,17 +25,20 @@
 
 ;;; Commentary:
 
-;; TODO
+;; A pass frontend based on Ivy, made primarily to use with EXWM.
+;;
+;; The only command is `ivy-pass'.
 
 ;;; Code:
 (require 'ivy)
 (require 'seq)
 
 (defgroup ivy-pass ()
-  "An ivy-based pass frontend.")
+  "An ivy-based pass frontend."
+  :group 'password-store)
 
 (defcustom ivy-pass-initial-wait 250
-  "How much miliseconds to wait before typing characters"
+  "How much miliseconds to wait before typing characters."
   :type 'integer
   :group 'ivy-pass)
 
@@ -43,6 +46,8 @@
   "Delay between typing characters."
   :type 'integer
   :group 'ivy-pass)
+
+(setq ivy-pass-sequences nil)
 
 (defcustom ivy-pass-sequences
   '((autotype . (wait
@@ -53,8 +58,35 @@
     (password . ((field . secret)))
     (username . ((field . "username")))
     (url . ((field . "url"))))
-  "Sequences to execute by ivy-pass."
-  :group 'ivy-pass)
+  "Sequences to execute by `ivy-pass'.
+
+Take a look at `ivy-pass--get-commands' for available fields."
+  :group 'ivy-pass
+  :options '(autotype password username url)
+  :type '(alist :key-type (symbol :tag "Sequence name")
+                :value-type (repeat
+                             :tag "Sequence contents"
+                             (choice
+                              (const :tag "Wait for `ivy-pass-initial-wait'" wait)
+                              (cons
+                               :tag "Wait for miliseconds"
+                               (const :tag "Wait for miliseconds" wait)
+                               (integer :tag "Number of miliseconds to wait"))
+                              (cons
+                               :tag "Enter a field"
+                               (const :tag "Enter a field" field)
+                               (choice
+                                (const :tag "Password" secret)
+                                (const :tag "Username" "username")
+                                (const :tag "URL" "url")
+                                (string :tag "Other field")))
+                              (cons
+                               :tag "Press a key"
+                               (const :tag "Press a key" key)
+                               (choice
+                                (const "Tab")
+                                (const "Return")
+                                (string :tag "Other key")))))))
 
 (defun ivy-pass--async-command (command callback)
   "Run COMMAND in shell asyncronously.
@@ -91,7 +123,9 @@ Call CALLBACK when the last command is executed."
    (number-to-string ivy-pass-delay)))
 
 (defun ivy-pass--get-wait-command (&optional miliseconds)
-  "Return a command to sleep for `ivy-pass-initial-wait'."
+  "Return a command to sleep for MILISECONDS.
+
+If MILISECONDS is nil, default to `ivy-pass-initial-wait'."
   (format "sleep %f" (/ (float (or miliseconds ivy-pass-initial-wait)) 1000)))
 
 (defun ivy-pass--get-key-command (key)
@@ -110,7 +144,7 @@ ENTRY is an alist, FIELD is a symbol or string that can be a key of alist"
 
 SEQUENCE is a list of the following elements:
 - `wait'.  Wait for `ivy-pass-initial-wait' miliseconds.
-- `(wait <miliseconds>)'. Wait for <miliseconds>.
+- `(wait <miliseconds>)'.  Wait for <miliseconds>.
 - `(key <key>)'.  Type <key>
 - `(field <field>)'.  Type <field> of entry."
   (seq-filter
@@ -130,10 +164,13 @@ SEQUENCE is a list of the following elements:
   "Get a pass entry by ENTRY-NAME."
   (let ((entry (auth-source-pass-parse-entry entry-name)))
     (unless entry
-      (user-error "The entry is empty. Perhaps password was incorrect?"))
+      (user-error "The entry is empty.  Perhaps password was incorrect?"))
     entry))
 
 (defun ivy-pass--get-sequence (entry sequence-name)
+  "Get a sequence from an ENTRY.
+
+SEQUENCE-NAME is a key of `ivy-pass-sequences'."
   (or (when-let ((str (alist-get
                        (format "sequence-%s" (symbol-name sequence-name))
                        entry nil nil #'equal)))
@@ -143,7 +180,17 @@ SEQUENCE is a list of the following elements:
       (alist-get sequence-name ivy-pass-sequences)))
 
 (defmacro ivy-pass--def-command (name &rest body)
-  (declare (doc-string 2) (indent 1))
+  "Create functions to be invoked from `ivy-pass'.
+
+NAME is the base name.  The first function created, NAME-command,
+can be executed inside the `ivy-pass' completion interface.
+
+The second function, NAME-action, can be registered as an action,
+e.g. with `ivy-set-actions'.
+
+BODY is put inside both functions, wrapped in the code that makes
+the current entry available via the `entry' variable."
+  (declare (indent 1))
   `(progn
      (defun ,(intern (format "%s-command" name)) ()
        (interactive)
@@ -206,13 +253,21 @@ SEQUENCE is a list of the following elements:
     (define-key map (kbd "M-u") #'ivy-pass--username-command)
     (define-key map (kbd "M-U") #'ivy-pass--url-command)
     (define-key map (kbd "M-f") #'ivy-pass--fields-command)
-    map))
+    map)
+  "A keymap for `ivy-pass'.")
 
 (defvar ivy-pass-history nil
-  "History for `ivy-pass'")
+  "History for `ivy-pass'.")
 
 ;;;###autoload
 (defun ivy-pass ()
+  "A frontend for pass.
+
+The command invokes Ivy to select an entry from the pass
+database (with `password-store-list').
+
+Available commands:
+\\{ivy-pass-map}"
   (interactive)
   (ivy-read "Pass entry: "
             (password-store-list)
