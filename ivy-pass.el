@@ -44,36 +44,16 @@
   :type 'integer
   :group 'ivy-pass)
 
-(defcustom ivy-pass-autotype
-  '(wait
-    (field . "username")
-    (key . "Tab")
-    (field . secret)
-    (key . "Return"))
-  "A sequence to execute on autotype.
-
-Take a look at `ivy-pass--get-commands' for possible fields."
-  :group 'ivy-pass)
-
-(defcustom ivy-pass-password
-  '(wait (field . secret))
-  "A sequence to execute to enter password.
-
-Take a look at `ivy-pass--get-commands' for possible fields."
-  :group 'ivy-pass)
-
-(defcustom ivy-pass-username
-  '(wait (field . "username"))
-  "A sequence to execute to enter username.
-
-Take a look at `ivy-pass--get-commands' for possible fields."
-  :group 'ivy-pass)
-
-(defcustom ivy-pass-url
-  '(wait (field . "url"))
-  "A sequence to execute to enter url.
-
-Take a look at `ivy-pass--get-commands' for possible fields."
+(defcustom ivy-pass-sequences
+  '((autotype . (wait
+                 (field . "username")
+                 (key . "Tab")
+                 (field . secret)
+                 (key . "Return")))
+    (password . ((field . secret)))
+    (username . ((field . "username")))
+    (url . ((field . "url"))))
+  "Sequences to execute by ivy-pass."
   :group 'ivy-pass)
 
 (defun ivy-pass--async-command (command callback)
@@ -110,7 +90,6 @@ Call CALLBACK when the last command is executed."
    "| xdotool type --clearmodifiers --file - --delay "
    (number-to-string ivy-pass-delay)))
 
-
 (defun ivy-pass--get-wait-command (&optional miliseconds)
   "Return a command to sleep for `ivy-pass-initial-wait'."
   (format "sleep %f" (/ (float (or miliseconds ivy-pass-initial-wait)) 1000)))
@@ -126,59 +105,111 @@ ENTRY is an alist, FIELD is a symbol or string that can be a key of alist"
   (when-let ((contents (alist-get field entry nil nil #'equal)))
     (ivy-pass--get-type-command contents)))
 
-(defun ivy-pass--get-commands (entry-name sequence)
-  "Get a list of commands to execute for ENTRY-NAME.
+(defun ivy-pass--get-commands (entry sequence)
+  "Get a list of commands to execute for ENTRY.
 
 SEQUENCE is a list of the following elements:
 - `wait'.  Wait for `ivy-pass-initial-wait' miliseconds.
 - `(wait <miliseconds>)'. Wait for <miliseconds>.
 - `(key <key>)'.  Type <key>
 - `(field <field>)'.  Type <field> of entry."
+  (seq-filter
+   (lambda (command) (not (seq-empty-p command)))
+   (mapcar
+    (lambda (elem)
+      (unless (sequencep elem)
+        (setq elem (list elem)))
+      (pcase (car elem)
+        ('wait (ivy-pass--get-wait-command (cdr elem)))
+        ('key (ivy-pass--get-key-command (cdr elem)))
+        ('field (ivy-pass--get-entry-command entry (cdr elem)))
+        (_ (error "Wrong field: %s" (prin1-to-string elem)))))
+    sequence)))
+
+(defun ivy-pass--get-entry (entry-name)
+  "Get a pass entry by ENTRY-NAME."
   (let ((entry (auth-source-pass-parse-entry entry-name)))
     (unless entry
-      (user-error "Entry is empty. Perhaps password was incorrect?"))
-    (seq-filter
-     (lambda (command) (not (seq-empty-p command)))
-     (mapcar
-      (lambda (elem)
-        (unless (sequencep elem)
-          (setq elem (list elem)))
-        (pcase (car elem)
-          ('wait (ivy-pass--get-wait-command (cdr elem)))
-          ('key (ivy-pass--get-key-command (cdr elem)))
-          ('field (ivy-pass--get-entry-command entry (cdr elem)))
-          (_ (error "Wrong field: %s" (prin1-to-string elem)))))
-      sequence))))
+      (user-error "The entry is empty. Perhaps password was incorrect?"))
+    entry))
 
-(defvar ivy-pass-history nil
-  "History for `ivy-pass'")
+(defun ivy-pass--get-sequence (entry sequence-name)
+  (or (when-let ((str (alist-get
+                       (format "sequence-%s" (symbol-name sequence-name))
+                       entry nil nil #'equal)))
+        (condition-case err
+            (car (read-from-string str))
+          (error (error "Error in %s: %s" str (prin1-to-string err)))))
+      (alist-get sequence-name ivy-pass-sequences)))
 
-(defmacro ivy-pass--define-sequence-funcs (sequence sequence-name)
+(defmacro ivy-pass--def-command (name &rest body)
+  (declare (doc-string 2) (indent 1))
   `(progn
-     (defun ,(intern (format "ivy-pass--type-%s-command" sequence-name)) ()
+     (defun ,(intern (format "%s-command" name)) ()
        (interactive)
        (ivy-exit-with-action
         (lambda (entry-name)
-          (ivy-pass--async-commands
-           (ivy-pass--get-commands entry-name ,sequence)))))
-     (defun ,(intern (format "ivy-pass--type-%s-action" sequence-name)) (entry-name)
-       (ivy-pass--async-commands
-        (ivy-pass--get-commands
-         entry-name
-         ,sequence)))))
+          (let ((entry (ivy-pass--get-entry entry-name)))
+            ,@body))))
+     (defun ,(intern (format "%s-action" name)) (entry-name)
+       (let ((entry (ivy-pass--get-entry entry-name)))
+         ,@body))))
 
-(ivy-pass--define-sequence-funcs ivy-pass-autotype "autotype")
-(ivy-pass--define-sequence-funcs ivy-pass-password "password")
-(ivy-pass--define-sequence-funcs ivy-pass-username "username")
-(ivy-pass--define-sequence-funcs ivy-pass-url "url")
+(ivy-pass--def-command ivy-pass--autotype
+  (ivy-pass--async-commands
+   (ivy-pass--get-commands
+    entry (ivy-pass--get-sequence entry 'autotype))))
+
+(ivy-pass--def-command ivy-pass--password
+  (ivy-pass--async-commands
+   (ivy-pass--get-commands
+    entry (ivy-pass--get-sequence entry 'password))))
+
+(ivy-pass--def-command ivy-pass--username
+  (ivy-pass--async-commands
+   (ivy-pass--get-commands
+    entry (ivy-pass--get-sequence entry 'username))))
+
+(ivy-pass--def-command ivy-pass--url
+  (ivy-pass--async-commands
+   (ivy-pass--get-commands
+    entry (ivy-pass--get-sequence entry 'url))))
+
+(ivy-pass--def-command ivy-pass--fields
+  (let ((sequences
+         (mapcar
+          (lambda (item)
+            (let ((field-name (car item)))
+              (when (symbolp field-name)
+                (setq field-name (symbol-name field-name)))
+              (if (string-match (rx bos "sequence-") field-name)
+                  `(,field-name
+                    . ,(condition-case err
+                           (eval (car (read-from-string (cdr item))))
+                         (error (format "Error in %s: %s" field-name
+                                        (prin1-to-string err)))))
+                `(,field-name . (wait (field . ,(car item)))))))
+          entry)))
+    (ivy-read "Field: " sequences
+              :require-match t
+              :sort nil
+              :action (lambda (data)
+                        (ivy-pass--async-commands
+                         (ivy-pass--get-commands
+                          entry
+                          (cdr data)))))))
 
 (defvar ivy-pass-map
   (let ((map (make-sparse-keymap)))
-    (define-key map (kbd "M-a") #'ivy-pass--type-autotype-command)
-    (define-key map (kbd "M-p") #'ivy-pass--type-password-command)
-    (define-key map (kbd "M-u") #'ivy-pass--type-username-command)
-    (define-key map (kbd "M-U") #'ivy-pass--type-url-command)
+    (define-key map (kbd "M-a") #'ivy-pass--autotype-command)
+    (define-key map (kbd "M-p") #'ivy-pass--password-command)
+    (define-key map (kbd "M-u") #'ivy-pass--username-command)
+    (define-key map (kbd "M-U") #'ivy-pass--url-command)
+    (define-key map (kbd "M-f") #'ivy-pass--fields-command)
     map))
+
+(defvar ivy-pass-history nil
+  "History for `ivy-pass'")
 
 ;;;###autoload
 (defun ivy-pass ()
@@ -189,10 +220,11 @@ SEQUENCE is a list of the following elements:
             :history 'ivy-pass-history
             :keymap ivy-pass-map
             :action '(1
-                      ("p" ivy-pass--type-password-action "password")
-                      ("a" ivy-pass--type-autotype-action "autotype")
-                      ("u" ivy-pass--type-username-action "username")
-                      ("U" ivy-pass--type-url-action "url"))
+                      ("p" ivy-pass--password-action "password")
+                      ("a" ivy-pass--autotype-action "autotype")
+                      ("f" ivy-pass--fields-action "fields")
+                      ("u" ivy-pass--username-action "username")
+                      ("U" ivy-pass--url-action "url"))
             :caller #'ivy-pass))
 
 (provide 'ivy-pass)
