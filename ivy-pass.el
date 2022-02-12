@@ -5,7 +5,7 @@
 ;; Author: Korytov Pavel <thexcloud@gmail.com>
 ;; Maintainer: Korytov Pavel <thexcloud@gmail.com>
 ;; Version: 0.1.0
-;; Package-Requires: ((emacs "27.1") (ivy "0.13.0"))
+;; Package-Requires: ((emacs "27.1") (ivy "0.13.0") (password-store "2.1.4"))
 ;; Homepage: https://github.com/SqrtMinusOne/org-journal-tags.el
 
 ;; This file is NOT part of GNU Emacs.
