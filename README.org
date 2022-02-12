@@ -1,0 +1,68 @@
+#+TITLE: ivy-pass
+
+A [[https://www.passwordstore.org/][pass]] frontend based on [[https://github.com/abo-abo/swiper#ivy][Ivy]], made primarily to use with [[https://github.com/ch11ng/exwm][EXWM]] and [[https://github.com/tumashu/ivy-posframe][ivy-posframe]].
+
+Also take a look at Nicolas Petton's [[https://github.com/NicolasPetton/pass][pass]], =ivy-pass= is designed as complementary to the Nicolas' package.
+
+This package is made with Ivy because I need some fine-tuning like actions and turning off the sort in some completions, and Ivy happens to be the competing system I'm using now.
+
+* Installation
+As the package isn’t yet available anywhere but in this repository, you can clone the repository, add it to the load-path and require the package. My preferred way is =use-package= with =straight=:
+
+#+begin_src emacs-lisp
+(use-package ivy-pass
+  :straight (:host github :repo "SqrtMinusOne/ivy-pass")
+  :after (exwm))
+#+end_src
+
+This package types stuff with =xdotool=, so you need to have that available in your =$PATH=.
+* Usage
+Emacs' built-in [[https://www.gnu.org/software/emacs/manual/html_node/auth/The-Unix-password-store.html][password store]] integration has to be set up.
+
+The only command is =M-x ivy-pass=, which invokes Ivy to select an entry from the pass database. Available commands in the selection buffer:
+- =M-a=. Perform autotype
+- =M-p=. Type password
+- =M-u=. Type username
+- =M-U=. Type url
+- =M-f=. Select a field to type
+
+* Customization
+There are a few parameters that control delays:
+- =ivy-pass-initial-wait= controls the initial delay before starting to type a sequence (in milliseconds)
+- =ivy-pass-delay= controls the delay between typing characters (in milliseconds)
+
+There is also =ivy-pass-sequences= that determines the sequence of actions =ivy-pass= performs.
+
+It is an alist with the following required keys (corresponding to the basic actions):
+- =autotype=
+- =password=
+- =username=
+- =url=
+
+The values are lists of the following elements:
+- =wait=.  Wait for =ivy-pass-initial-wait= milliseconds
+- =(wait <milliseconds>)=.  Wait for =<milliseconds>=.
+- =(key <key>)=.  Type =<key>=.
+- =(field <field>)=.  Type =<field>= of entry.
+
+For example, the starting values:
+#+begin_src emacs-lisp
+'((autotype . (wait
+               (field . "username")
+               (key . "Tab")
+               (field . secret)
+               (key . "Return")))
+  (password . (wait (field . secret)))
+  (username . (wait (field . "username")))
+  (url . (wait (field . "url"))))
+#+end_src
+
+In addition to the global override, sequences can be overriden per-entry with a field called =sequence-<name>=, where =<name>= is a key of =ivy-pass-sequences=.
+
+For example, here is an override to press =Tab= twice:
+#+begin_example
+<pass>
+username: thexcloud@gmail.com
+url: <url>
+sequence-autotype: (wait (field . "username") (key . "Tab") (key . "Tab") (field . secret) (key . "Return"))
+#+end_example

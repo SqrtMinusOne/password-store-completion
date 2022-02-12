@@ -25,9 +25,18 @@
 
 ;;; Commentary:
 
-;; A pass frontend based on Ivy, made primarily to use with EXWM.
+;; A pass frontend based on Ivy, made primarily to use with EXWM and
+;; ivy-posframe.
 ;;
-;; The only command is `ivy-pass'.
+;; This package types stuff with xdotool, so you need to have that
+;; available in your $PATH.
+;;
+;; The only command is `ivy-pass', which presents an Ivy buffer to
+;; select some entry from the pass database.  Take a look at its
+;; docstring for mode detail.
+;;
+;; Also take a look at the package README at
+;; <https://github.com/SqrtMinusOne/ivy-pass>.
 
 ;;; Code:
 (require 'ivy)
@@ -38,7 +47,7 @@
   :group 'password-store)
 
 (defcustom ivy-pass-initial-wait 250
-  "How much miliseconds to wait before typing characters."
+  "How much milliseconds to wait before typing characters."
   :type 'integer
   :group 'ivy-pass)
 
@@ -55,12 +64,20 @@
                  (key . "Tab")
                  (field . secret)
                  (key . "Return")))
-    (password . ((field . secret)))
-    (username . ((field . "username")))
-    (url . ((field . "url"))))
+    (password . (wait (field . secret)))
+    (username . (wait (field . "username")))
+    (url . (wait (field . "url"))))
   "Sequences to execute by `ivy-pass'.
 
-Take a look at `ivy-pass--get-commands' for available fields."
+It is an alist with the following required keys (corresponding to the
+basic actions):
+- autotype
+- password
+- username
+- url
+
+Values are lists of symbols that determine action. Take a look at
+`ivy-pass--get-commands' for available options."
   :group 'ivy-pass
   :options '(autotype password username url)
   :type '(alist :key-type (symbol :tag "Sequence name")
@@ -69,9 +86,9 @@ Take a look at `ivy-pass--get-commands' for available fields."
                              (choice
                               (const :tag "Wait for `ivy-pass-initial-wait'" wait)
                               (cons
-                               :tag "Wait for miliseconds"
-                               (const :tag "Wait for miliseconds" wait)
-                               (integer :tag "Number of miliseconds to wait"))
+                               :tag "Wait for milliseconds"
+                               (const :tag "Wait for milliseconds" wait)
+                               (integer :tag "Number of milliseconds to wait"))
                               (cons
                                :tag "Enter a field"
                                (const :tag "Enter a field" field)
@@ -122,11 +139,11 @@ Call CALLBACK when the last command is executed."
    "| xdotool type --clearmodifiers --file - --delay "
    (number-to-string ivy-pass-delay)))
 
-(defun ivy-pass--get-wait-command (&optional miliseconds)
-  "Return a command to sleep for MILISECONDS.
+(defun ivy-pass--get-wait-command (&optional milliseconds)
+  "Return a command to sleep for MILLISECONDS.
 
-If MILISECONDS is nil, default to `ivy-pass-initial-wait'."
-  (format "sleep %f" (/ (float (or miliseconds ivy-pass-initial-wait)) 1000)))
+If MILLISECONDS is nil, default to `ivy-pass-initial-wait'."
+  (format "sleep %f" (/ (float (or milliseconds ivy-pass-initial-wait)) 1000)))
 
 (defun ivy-pass--get-key-command (key)
   "Get a command that presses KEY."
@@ -143,9 +160,9 @@ ENTRY is an alist, FIELD is a symbol or string that can be a key of alist"
   "Get a list of commands to execute for ENTRY.
 
 SEQUENCE is a list of the following elements:
-- `wait'.  Wait for `ivy-pass-initial-wait' miliseconds.
-- `(wait <miliseconds>)'.  Wait for <miliseconds>.
-- `(key <key>)'.  Type <key>
+- `wait'.  Wait for `ivy-pass-initial-wait' milliseconds.
+- `(wait <milliseconds>)'.  Wait for <milliseconds>.
+- `(key <key>)'.  Type <key>.
 - `(field <field>)'.  Type <field> of entry."
   (seq-filter
    (lambda (command) (not (seq-empty-p command)))
