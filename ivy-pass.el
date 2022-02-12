@@ -41,6 +41,8 @@
 ;;; Code:
 (require 'ivy)
 (require 'seq)
+(require 'auth-source-pass)
+(require 'password-store)
 
 (defgroup ivy-pass ()
   "An ivy-based pass frontend."
@@ -55,8 +57,6 @@
   "Delay between typing characters."
   :type 'integer
   :group 'ivy-pass)
-
-(setq ivy-pass-sequences nil)
 
 (defcustom ivy-pass-sequences
   '((autotype . (wait
@@ -76,7 +76,7 @@ basic actions):
 - username
 - url
 
-Values are lists of symbols that determine action. Take a look at
+Values are lists of symbols that determine action.  Take a look at
 `ivy-pass--get-commands' for available options."
   :group 'ivy-pass
   :options '(autotype password username url)
@@ -113,7 +113,7 @@ Call CALLBACK when the command in finished."
                               "-c" command)))
     (set-process-sentinel
      proc
-     (lambda (process msg)
+     (lambda (process _msg)
        (pcase (process-status process)
          ('exit (funcall callback))
          ('fatal (error "Error in running %s" command)))))))
@@ -250,8 +250,8 @@ the current entry available via the `entry' variable."
                   `(,field-name
                     . ,(condition-case err
                            (eval (car (read-from-string (cdr item))))
-                         (error (format "Error in %s: %s" field-name
-                                        (prin1-to-string err)))))
+                         (error (user-error "Error in %s: %s" field-name
+                                            (prin1-to-string err)))))
                 `(,field-name . (wait (field . ,(car item)))))))
           entry)))
     (ivy-read "Field: " sequences
