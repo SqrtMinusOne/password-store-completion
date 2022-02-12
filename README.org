@@ -1,6 +1,6 @@
 #+TITLE: ivy-pass
 
-A [[https://www.passwordstore.org/][pass]] frontend based on [[https://github.com/abo-abo/swiper#ivy][Ivy]], made primarily to use with [[https://github.com/ch11ng/exwm][EXWM]] and [[https://github.com/tumashu/ivy-posframe][ivy-posframe]].
+A [[https://www.passwordstore.org/][pass]] frontend based on [[https://github.com/abo-abo/swiper#ivy][Ivy]], made primarily to use with [[https://github.com/ch11ng/exwm][EXWM]] and [[https://github.com/tumashu/ivy-posframe][ivy-posframe]]. Types fields from entries.
 
 Also take a look at Nicolas Petton's [[https://github.com/NicolasPetton/pass][pass]], =ivy-pass= is designed as complementary to the Nicolas' package.
 
