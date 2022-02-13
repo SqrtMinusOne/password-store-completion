@@ -1,4 +1,4 @@
-;;; ivy-pass.el --- A simple pass frontend for Ivy -*- lexical-binding: t -*-
+;;; password-store-ivy --- A simple pass frontend for Ivy -*- lexical-binding: t -*-
 
 ;; Copyright (C) 2022 Korytov Pavel
 
@@ -31,12 +31,12 @@
 ;; This package types stuff with xdotool, so you need to have that
 ;; available in your $PATH.
 ;;
-;; The only command is `ivy-pass', which presents an Ivy buffer to
+;; The only command is `password-store-ivy', which presents an Ivy buffer to
 ;; select some entry from the pass database.  Take a look at its
 ;; docstring for mode detail.
 ;;
 ;; Also take a look at the package README at
-;; <https://github.com/SqrtMinusOne/ivy-pass>.
+;; <https://github.com/SqrtMinusOne/password-store-ivy>.
 
 ;;; Code:
 (require 'ivy)
@@ -44,21 +44,21 @@
 (require 'auth-source-pass)
 (require 'password-store)
 
-(defgroup ivy-pass ()
+(defgroup password-store-ivy ()
   "An ivy-based pass frontend."
   :group 'password-store)
 
-(defcustom ivy-pass-initial-wait 250
+(defcustom password-store-ivy-initial-wait 250
   "How much milliseconds to wait before typing characters."
   :type 'integer
-  :group 'ivy-pass)
+  :group 'password-store-ivy)
 
-(defcustom ivy-pass-delay 50
+(defcustom password-store-ivy-delay 50
   "Delay between typing characters."
   :type 'integer
-  :group 'ivy-pass)
+  :group 'password-store-ivy)
 
-(defcustom ivy-pass-sequences
+(defcustom password-store-ivy-sequences
   '((autotype . (wait
                  (field . "username")
                  (key . "Tab")
@@ -67,7 +67,7 @@
     (password . (wait (field . secret)))
     (username . (wait (field . "username")))
     (url . (wait (field . "url"))))
-  "Sequences to execute by `ivy-pass'.
+  "Sequences to execute by `password-store-ivy'.
 
 It is an alist with the following required keys (corresponding to the
 basic actions):
@@ -77,14 +77,14 @@ basic actions):
 - url
 
 Values are lists of symbols that determine action.  Take a look at
-`ivy-pass--get-commands' for available options."
-  :group 'ivy-pass
+`password-store-ivy--get-commands' for available options."
+  :group 'password-store-ivy
   :options '(autotype password username url)
   :type '(alist :key-type (symbol :tag "Sequence name")
                 :value-type (repeat
                              :tag "Sequence contents"
                              (choice
-                              (const :tag "Wait for `ivy-pass-initial-wait'" wait)
+                              (const :tag "Wait for `password-store-ivy-initial-wait'" wait)
                               (cons
                                :tag "Wait for milliseconds"
                                (const :tag "Wait for milliseconds" wait)
@@ -105,7 +105,7 @@ Values are lists of symbols that determine action.  Take a look at
                                 (const "Return")
                                 (string :tag "Other key")))))))
 
-(defun ivy-pass--async-command (command callback)
+(defun password-store-ivy--async-command (command callback)
   "Run COMMAND in shell asyncronously.
 
 Call CALLBACK when the command in finished."
@@ -118,49 +118,49 @@ Call CALLBACK when the command in finished."
          ('exit (funcall callback))
          ('fatal (error "Error in running %s" command)))))))
 
-(defun ivy-pass--async-commands (commands &optional callback)
+(defun password-store-ivy--async-commands (commands &optional callback)
   "Run COMMANDS asyncronously.
 
 Call CALLBACK when the last command is executed."
   (if (seq-empty-p commands)
       (when callback (funcall callback))
-    (ivy-pass--async-command
+    (password-store-ivy--async-command
      (car commands)
      (lambda ()
-       (ivy-pass--async-commands
+       (password-store-ivy--async-commands
         (cdr commands)
         callback)))))
 
-(defun ivy-pass--get-type-command (str)
+(defun password-store-ivy--get-type-command (str)
   "Return a command to type STR."
   (concat
    "printf "
    (shell-quote-argument str)
    "| xdotool type --clearmodifiers --file - --delay "
-   (number-to-string ivy-pass-delay)))
+   (number-to-string password-store-ivy-delay)))
 
-(defun ivy-pass--get-wait-command (&optional milliseconds)
+(defun password-store-ivy--get-wait-command (&optional milliseconds)
   "Return a command to sleep for MILLISECONDS.
 
-If MILLISECONDS is nil, default to `ivy-pass-initial-wait'."
-  (format "sleep %f" (/ (float (or milliseconds ivy-pass-initial-wait)) 1000)))
+If MILLISECONDS is nil, default to `password-store-ivy-initial-wait'."
+  (format "sleep %f" (/ (float (or milliseconds password-store-ivy-initial-wait)) 1000)))
 
-(defun ivy-pass--get-key-command (key)
+(defun password-store-ivy--get-key-command (key)
   "Get a command that presses KEY."
   (format "xdotool key %s" key))
 
-(defun ivy-pass--get-entry-command (entry field)
+(defun password-store-ivy--get-entry-command (entry field)
   "Get a command to type FIELD of ENTRY.
 
 ENTRY is an alist, FIELD is a symbol or string that can be a key of alist"
   (when-let ((contents (alist-get field entry nil nil #'equal)))
-    (ivy-pass--get-type-command contents)))
+    (password-store-ivy--get-type-command contents)))
 
-(defun ivy-pass--get-commands (entry sequence)
+(defun password-store-ivy--get-commands (entry sequence)
   "Get a list of commands to execute for ENTRY.
 
 SEQUENCE is a list of the following elements:
-- `wait'.  Wait for `ivy-pass-initial-wait' milliseconds.
+- `wait'.  Wait for `password-store-ivy-initial-wait' milliseconds.
 - `(wait <milliseconds>)'.  Wait for <milliseconds>.
 - `(key <key>)'.  Type <key>.
 - `(field <field>)'.  Type <field> of entry."
@@ -171,36 +171,36 @@ SEQUENCE is a list of the following elements:
       (unless (sequencep elem)
         (setq elem (list elem)))
       (pcase (car elem)
-        ('wait (ivy-pass--get-wait-command (cdr elem)))
-        ('key (ivy-pass--get-key-command (cdr elem)))
-        ('field (ivy-pass--get-entry-command entry (cdr elem)))
+        ('wait (password-store-ivy--get-wait-command (cdr elem)))
+        ('key (password-store-ivy--get-key-command (cdr elem)))
+        ('field (password-store-ivy--get-entry-command entry (cdr elem)))
         (_ (error "Wrong field: %s" (prin1-to-string elem)))))
     sequence)))
 
-(defun ivy-pass--get-entry (entry-name)
+(defun password-store-ivy--get-entry (entry-name)
   "Get a pass entry by ENTRY-NAME."
   (let ((entry (auth-source-pass-parse-entry entry-name)))
     (unless entry
       (user-error "The entry is empty.  Perhaps password was incorrect?"))
     entry))
 
-(defun ivy-pass--get-sequence (entry sequence-name)
+(defun password-store-ivy--get-sequence (entry sequence-name)
   "Get a sequence from an ENTRY.
 
-SEQUENCE-NAME is a key of `ivy-pass-sequences'."
+SEQUENCE-NAME is a key of `password-store-ivy-sequences'."
   (or (when-let ((str (alist-get
                        (format "sequence-%s" (symbol-name sequence-name))
                        entry nil nil #'equal)))
         (condition-case err
             (car (read-from-string str))
           (error (error "Error in %s: %s" str (prin1-to-string err)))))
-      (alist-get sequence-name ivy-pass-sequences)))
+      (alist-get sequence-name password-store-ivy-sequences)))
 
-(defmacro ivy-pass--def-command (name &rest body)
-  "Create functions to be invoked from `ivy-pass'.
+(defmacro password-store-ivy--def-command (name &rest body)
+  "Create functions to be invoked from `password-store-ivy'.
 
 NAME is the base name.  The first function created, NAME-command,
-can be executed inside the `ivy-pass' completion interface.
+can be executed inside the `password-store-ivy' completion interface.
 
 The second function, NAME-action, can be registered as an action,
 e.g. with `ivy-set-actions'.
@@ -213,33 +213,33 @@ the current entry available via the `entry' variable."
        (interactive)
        (ivy-exit-with-action
         (lambda (entry-name)
-          (let ((entry (ivy-pass--get-entry entry-name)))
+          (let ((entry (password-store-ivy--get-entry entry-name)))
             ,@body))))
      (defun ,(intern (format "%s-action" name)) (entry-name)
-       (let ((entry (ivy-pass--get-entry entry-name)))
+       (let ((entry (password-store-ivy--get-entry entry-name)))
          ,@body))))
 
-(ivy-pass--def-command ivy-pass--autotype
-  (ivy-pass--async-commands
-   (ivy-pass--get-commands
-    entry (ivy-pass--get-sequence entry 'autotype))))
+(password-store-ivy--def-command password-store-ivy--autotype
+  (password-store-ivy--async-commands
+   (password-store-ivy--get-commands
+    entry (password-store-ivy--get-sequence entry 'autotype))))
 
-(ivy-pass--def-command ivy-pass--password
-  (ivy-pass--async-commands
-   (ivy-pass--get-commands
-    entry (ivy-pass--get-sequence entry 'password))))
+(password-store-ivy--def-command password-store-ivy--password
+  (password-store-ivy--async-commands
+   (password-store-ivy--get-commands
+    entry (password-store-ivy--get-sequence entry 'password))))
 
-(ivy-pass--def-command ivy-pass--username
-  (ivy-pass--async-commands
-   (ivy-pass--get-commands
-    entry (ivy-pass--get-sequence entry 'username))))
+(password-store-ivy--def-command password-store-ivy--username
+  (password-store-ivy--async-commands
+   (password-store-ivy--get-commands
+    entry (password-store-ivy--get-sequence entry 'username))))
 
-(ivy-pass--def-command ivy-pass--url
-  (ivy-pass--async-commands
-   (ivy-pass--get-commands
-    entry (ivy-pass--get-sequence entry 'url))))
+(password-store-ivy--def-command password-store-ivy--url
+  (password-store-ivy--async-commands
+   (password-store-ivy--get-commands
+    entry (password-store-ivy--get-sequence entry 'url))))
 
-(ivy-pass--def-command ivy-pass--fields
+(password-store-ivy--def-command password-store-ivy--fields
   (let ((sequences
          (mapcar
           (lambda (item)
@@ -258,46 +258,46 @@ the current entry available via the `entry' variable."
               :require-match t
               :sort nil
               :action (lambda (data)
-                        (ivy-pass--async-commands
-                         (ivy-pass--get-commands
+                        (password-store-ivy--async-commands
+                         (password-store-ivy--get-commands
                           entry
                           (cdr data)))))))
 
-(defvar ivy-pass-map
+(defvar password-store-ivy-map
   (let ((map (make-sparse-keymap)))
-    (define-key map (kbd "M-a") #'ivy-pass--autotype-command)
-    (define-key map (kbd "M-p") #'ivy-pass--password-command)
-    (define-key map (kbd "M-u") #'ivy-pass--username-command)
-    (define-key map (kbd "M-U") #'ivy-pass--url-command)
-    (define-key map (kbd "M-f") #'ivy-pass--fields-command)
+    (define-key map (kbd "M-a") #'password-store-ivy--autotype-command)
+    (define-key map (kbd "M-p") #'password-store-ivy--password-command)
+    (define-key map (kbd "M-u") #'password-store-ivy--username-command)
+    (define-key map (kbd "M-U") #'password-store-ivy--url-command)
+    (define-key map (kbd "M-f") #'password-store-ivy--fields-command)
     map)
-  "A keymap for `ivy-pass'.")
+  "A keymap for `password-store-ivy'.")
 
-(defvar ivy-pass-history nil
-  "History for `ivy-pass'.")
+(defvar password-store-ivy-history nil
+  "History for `password-store-ivy'.")
 
 ;;;###autoload
-(defun ivy-pass ()
+(defun password-store-ivy ()
   "A frontend for pass.
 
 The command invokes Ivy to select an entry from the pass
 database (with `password-store-list').
 
 Available commands:
-\\{ivy-pass-map}"
+\\{password-store-ivy-map}"
   (interactive)
   (ivy-read "Pass entry: "
             (password-store-list)
             :require-match t
-            :history 'ivy-pass-history
-            :keymap ivy-pass-map
+            :history 'password-store-ivy-history
+            :keymap password-store-ivy-map
             :action '(1
-                      ("p" ivy-pass--password-action "password")
-                      ("a" ivy-pass--autotype-action "autotype")
-                      ("f" ivy-pass--fields-action "fields")
-                      ("u" ivy-pass--username-action "username")
-                      ("U" ivy-pass--url-action "url"))
-            :caller #'ivy-pass))
+                      ("p" password-store-ivy--password-action "password")
+                      ("a" password-store-ivy--autotype-action "autotype")
+                      ("f" password-store-ivy--fields-action "fields")
+                      ("u" password-store-ivy--username-action "username")
+                      ("U" password-store-ivy--url-action "url"))
+            :caller #'password-store-ivy))
 
-(provide 'ivy-pass)
-;;; ivy-pass.el ends here
+(provide 'password-store-ivy)
+;;; password-store-ivy.el ends here

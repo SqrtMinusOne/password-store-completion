@@ -1,8 +1,8 @@
-#+TITLE: ivy-pass
+#+TITLE: password-store-ivy
 
 A [[https://www.passwordstore.org/][pass]] frontend based on [[https://github.com/abo-abo/swiper#ivy][Ivy]], made primarily to use with [[https://github.com/ch11ng/exwm][EXWM]] and [[https://github.com/tumashu/ivy-posframe][ivy-posframe]]. Types fields from entries.
 
-Also take a look at Nicolas Petton's [[https://github.com/NicolasPetton/pass][pass]], =ivy-pass= is designed as complementary to the Nicolas' package.
+Also take a look at Nicolas Petton's [[https://github.com/NicolasPetton/pass][pass]], =password-store-ivy= is designed as complementary to the Nicolas' package.
 
 This package is made with Ivy because I need some fine-tuning like actions and turning off the sort in some completions, and Ivy happens to be the competing system I'm using now.
 
@@ -10,8 +10,8 @@ This package is made with Ivy because I need some fine-tuning like actions and t
 As the package isn’t yet available anywhere but in this repository, you can clone the repository, add it to the load-path and require the package. My preferred way is =use-package= with =straight=:
 
 #+begin_src emacs-lisp
-(use-package ivy-pass
-  :straight (:host github :repo "SqrtMinusOne/ivy-pass")
+(use-package password-store-ivy
+  :straight (:host github :repo "SqrtMinusOne/password-store-ivy")
   :after (exwm))
 #+end_src
 
@@ -19,7 +19,7 @@ This package types stuff with =xdotool=, so you need to have that available in y
 * Usage
 Emacs' built-in [[https://www.gnu.org/software/emacs/manual/html_node/auth/The-Unix-password-store.html][password store]] integration has to be set up.
 
-The only command is =M-x ivy-pass=, which invokes Ivy to select an entry from the pass database. Available commands in the selection buffer:
+The only command is =M-x password-store-ivy=, which invokes Ivy to select an entry from the pass database. Available commands in the selection buffer:
 - =M-a=. Perform autotype
 - =M-p=. Type password
 - =M-u=. Type username
@@ -28,10 +28,10 @@ The only command is =M-x ivy-pass=, which invokes Ivy to select an entry from th
 
 * Customization
 There are a few parameters that control delays:
-- =ivy-pass-initial-wait= controls the initial delay before starting to type a sequence (in milliseconds)
-- =ivy-pass-delay= controls the delay between typing characters (in milliseconds)
+- =password-store-ivy-initial-wait= controls the initial delay before starting to type a sequence (in milliseconds)
+- =password-store-ivy-delay= controls the delay between typing characters (in milliseconds)
 
-There is also =ivy-pass-sequences= that determines the sequence of actions =ivy-pass= performs.
+There is also =password-store-ivy-sequences= that determines the sequence of actions =password-store-ivy= performs.
 
 It is an alist with the following required keys (corresponding to the basic actions):
 - =autotype=
@@ -40,7 +40,7 @@ It is an alist with the following required keys (corresponding to the basic acti
 - =url=
 
 The values are lists of the following elements:
-- =wait=.  Wait for =ivy-pass-initial-wait= milliseconds
+- =wait=.  Wait for =password-store-ivy-initial-wait= milliseconds
 - =(wait <milliseconds>)=.  Wait for =<milliseconds>=.
 - =(key <key>)=.  Type =<key>=.
 - =(field <field>)=.  Type =<field>= of entry.
@@ -57,7 +57,7 @@ For example, the starting values:
   (url . (wait (field . "url"))))
 #+end_src
 
-In addition to the global override, sequences can be overriden per-entry with a field called =sequence-<name>=, where =<name>= is a key of =ivy-pass-sequences=.
+In addition to the global override, sequences can be overriden per-entry with a field called =sequence-<name>=, where =<name>= is a key of =password-store-ivy-sequences=.
 
 For example, here is an override to press =Tab= twice:
 #+begin_example
