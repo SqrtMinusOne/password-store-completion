@@ -4,7 +4,7 @@ A [[https://www.passwordstore.org/][pass]] frontend based on [[https://github.co
 
 Also take a look at Nicolas Petton's [[https://github.com/NicolasPetton/pass][pass]], =password-store-ivy= is designed as complementary to the Nicolas' package.
 
-This package is made with Ivy because I need some fine-tuning like actions and turning off the sort in some completions, and Ivy happens to be the competing system I'm using now.
+This package is made with Ivy because I need some fine-tuning like actions and turning off sorting in some completions, and Ivy happens to be the completion system I'm using now.
 
 * Installation
 As the package isn’t yet available anywhere but in this repository, you can clone the repository, add it to the load-path and require the package. My preferred way is =use-package= with =straight=:
