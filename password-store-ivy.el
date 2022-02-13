@@ -1,4 +1,4 @@
-;;; password-store-ivy --- A simple pass frontend for Ivy -*- lexical-binding: t -*-
+;;; password-store-ivy.el --- A simple pass frontend for Ivy -*- lexical-binding: t -*-
 
 ;; Copyright (C) 2022 Korytov Pavel
 
