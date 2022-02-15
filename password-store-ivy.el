@@ -105,6 +105,13 @@ Values are lists of symbols that determine action.  Take a look at
                                 (const "Return")
                                 (string :tag "Other key")))))))
 
+(defcustom password-store-ivy-end-message "Finished typing"
+  "A message to show after typing is finished."
+  :type '(choice
+          (const :tag "No message" nil)
+          (string :tag "Message"))
+  :group 'ivy-pass)
+
 (defun password-store-ivy--async-command (command callback)
   "Run COMMAND in shell asyncronously.
 
@@ -123,7 +130,10 @@ Call CALLBACK when the command in finished."
 
 Call CALLBACK when the last command is executed."
   (if (seq-empty-p commands)
-      (when callback (funcall callback))
+      (progn
+        (when callback (funcall callback))
+        (when password-store-ivy-end-message
+          (message password-store-ivy-end-message)))
     (password-store-ivy--async-command
      (car commands)
      (lambda ()
