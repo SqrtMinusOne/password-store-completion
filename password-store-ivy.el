@@ -1,12 +1,13 @@
 ;;; password-store-ivy.el --- A simple pass frontend for Ivy -*- lexical-binding: t -*-
 
-;; Copyright (C) 2022 Korytov Pavel
+;; Copyright (C) 2022-2023 Korytov Pavel
 
 ;; Author: Korytov Pavel <thexcloud@gmail.com>
 ;; Maintainer: Korytov Pavel <thexcloud@gmail.com>
 ;; Version: 0.1.0
 ;; Package-Requires: ((emacs "27.1") (ivy "0.13.0") (password-store "2.1.4"))
 ;; Homepage: https://github.com/SqrtMinusOne/org-journal-tags.el
+;; Published-At: 2022-02-13
 
 ;; This file is NOT part of GNU Emacs.
 
