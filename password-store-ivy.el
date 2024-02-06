@@ -260,7 +260,7 @@ the current entry available via the `entry' variable."
               (if (string-match (rx bos "sequence-") field-name)
                   `(,field-name
                     . ,(condition-case err
-                           (eval (car (read-from-string (cdr item))))
+                           (car (read-from-string (cdr item)))
                          (error (user-error "Error in %s: %s" field-name
                                             (prin1-to-string err)))))
                 `(,field-name . (wait (field . ,(car item)))))))
