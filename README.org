@@ -1,51 +1,63 @@
-#+TITLE: password-store-ivy
+#+TITLE: password-store-completion
 
-A [[https://www.passwordstore.org/][pass]] frontend based on [[https://github.com/abo-abo/swiper#ivy][Ivy]], made primarily to use with [[https://github.com/ch11ng/exwm][EXWM]] and [[https://github.com/tumashu/ivy-posframe][ivy-posframe]]. Types fields from entries.
+A completion-based pass frontend inspired by [[https://github.com/carnager/rofi-pass][rofi-pass]]. Integrates with [[https://github.com/abo-abo/swiper][Ivy]] or [[https://github.com/oantolin/embark][Embark]].
 
-Also take a look at Nicolas Petton's [[https://github.com/NicolasPetton/pass][pass]], =password-store-ivy= is designed as complementary to the Nicolas' package.
+The main purpose is typing passwords with =xdotool= (useful in [[https://github.com/emacs-exwm/exwm][EXWM]]).
 
-This package is made with Ivy because I need some fine-tuning like actions and turning off sorting in some completions, and Ivy happens to be the completion system I'm using now.
+Also take a look at Nicolas Petton's [[https://github.com/NicolasPetton/pass][pass]]. =password-store-completion= is designed as complementary to Nicolas' package.
 
 * Installation
-As the package isn’t yet available anywhere but in this repository, you can clone the repository, add it to the load-path and require the package. My preferred way is =use-package= with =straight=:
+As the package isn't yet available anywhere but in this repository, you can clone the repository, add it to the load-path, and require the package. My preferred way is =use-package= with =straight=:
 
 #+begin_src emacs-lisp
-(use-package password-store-ivy
-  :straight (:host github :repo "SqrtMinusOne/password-store-ivy")
-  :after (exwm))
+(use-package password-store-completion
+  :straight (:host github :repo "SqrtMinusOne/password-store-completion"))
 #+end_src
 
-This package types stuff with =xdotool=, so you need to have that available in your =$PATH=.
+=xdotool= has to be available in =$PATH=.
+
+For Ivy integration:
+#+begin_src emacs-lisp
+(require 'password-store-ivy)
+#+end_src
+Also be sure to load the main package before Ivy.
+
+For Embark integration:
+#+begin_src emacs-lisp
+(require 'password-store-embark)
+(password-store-embark-mode)
+#+end_src
+
 * Usage
 Emacs' built-in [[https://www.gnu.org/software/emacs/manual/html_node/auth/The-Unix-password-store.html][password store]] integration has to be set up.
 
-The only command is =M-x password-store-ivy=, which invokes Ivy to select an entry from the pass database. Available commands in the selection buffer:
-- =M-a=. Perform autotype
-- =M-p=. Type password
-- =M-u=. Type username
-- =M-U=. Type url
-- =M-f=. Select a field to type
+For Ivy integration, the command is =M-x password-store-ivy=, which invokes Ivy to select an entry from the pass database. Available commands in the selection buffer:
+- =M-a=: Perform autotype
+- =M-p=: Type password
+- =M-u=: Type username
+- =M-U=: Type URL
+- =M-f=: Select a field to type
+
+For other completion frameworks, run =M-x password-store-completion=. If Embark integration is enabled, the same actions are added.
 
 * Customization
-There are a few parameters that control delays:
-- =password-store-ivy-initial-wait= controls the initial delay before starting to type a sequence (in milliseconds)
-- =password-store-ivy-delay= controls the delay between typing characters (in milliseconds)
+The following parameters control delays:
+- =password-store-completion-initial-wait= controls the initial delay before starting to type a sequence (in milliseconds)
+- =password-store-completion-delay= controls the delay between typing characters (in milliseconds)
 
-There is also =password-store-ivy-sequences= that determines the sequence of actions =password-store-ivy= performs.
-
-It is an alist with the following required keys (corresponding to the basic actions):
+=password-store-completion-sequences= determines the steps of sequences. It is an alist; the keys correspond to the default sequences:
 - =autotype=
 - =password=
 - =username=
 - =url=
 
 The values are lists of the following elements:
-- =wait=.  Wait for =password-store-ivy-initial-wait= milliseconds
-- =(wait <milliseconds>)=.  Wait for =<milliseconds>=.
-- =(key <key>)=.  Type =<key>=.
-- =(field <field>)=.  Type =<field>= of entry.
+- =wait=: Wait for =password-store-completion-initial-wait= milliseconds
+- =(wait <milliseconds>)=: Wait for =<milliseconds>=
+- =(key <key>)=: Type =<key>=
+- =(field <field>)=: Type =<field>= of entry
 
-For example, the starting values:
+The default value is as follows:
 #+begin_src emacs-lisp
 '((autotype . (wait
                (field . "username")
@@ -57,12 +69,22 @@ For example, the starting values:
   (url . (wait (field . "url"))))
 #+end_src
 
-In addition to the global override, sequences can be overriden per-entry with a field called =sequence-<name>=, where =<name>= is a key of =password-store-ivy-sequences=.
+Sequences can also be overridden in a particular entry with a field called =sequence-<name>=, where =<name>= is a key of =password-store-completion-sequences=.
 
-For example, here is an override to press =Tab= twice:
+For example, to press =Tab= twice in the =autotype= sequence:
 #+begin_example
 <pass>
 username: thexcloud@gmail.com
 url: <url>
 sequence-autotype: (wait (field . "username") (key . "Tab") (key . "Tab") (field . secret) (key . "Return"))
 #+end_example
+
+Or, create a custom sequence:
+#+begin_example
+<pass>
+username: thexcloud@gmail.com
+url: <url>
+sequence-doubletab: (wait (field . "username") (key . "Tab") (key . "Tab") (field . secret) (key . "Return"))
+#+end_example
+
+Custom sequences can be run in the field selection interface (=M-f= in Ivy, =M-x embark-act f= in Embark).
