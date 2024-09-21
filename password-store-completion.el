@@ -266,6 +266,7 @@ the current entry available via the `entry' variable."
                            `(,field-name . (wait (field . ,(car item)))))))
                      entry))
          (data (completing-read "Field:" sequences)))
+    (run-hooks 'post-command-hook)
     (password-store-completion--async-commands
      (password-store-completion--get-commands
       entry
