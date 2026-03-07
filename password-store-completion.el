@@ -65,6 +65,16 @@
   :type 'integer
   :group 'password-store-completion)
 
+(defcustom password-store-completion-text-backend 'auto
+  "Backend used to type text.
+
+When set to `auto', use `xvkbd' when it is available in `exec-path'
+and fall back to `xdotool' otherwise."
+  :type '(choice (const :tag "Auto" auto)
+                 (const :tag "xvkbd" xvkbd)
+                 (const :tag "xdotool" xdotool))
+  :group 'password-store-completion)
+
 (defcustom password-store-completion-sequences
   '((autotype . (wait
                  (field . "username")
@@ -140,11 +150,31 @@ Call CALLBACK when the last command is executed."
      (lambda ()
        (password-store-completion--async-commands (cdr commands) callback)))))
 
-(defun password-store-completion--get-type-command (str)
-  "Return a command to type STR."
+(defun password-store-completion--text-backend ()
+  "Return the current text backend."
+  (pcase password-store-completion-text-backend
+    ('auto (if (executable-find "xvkbd") 'xvkbd 'xdotool))
+    (backend backend)))
+
+(defun password-store-completion--get-xdotool-type-command (str)
+  "Return an `xdotool' command to type STR."
   (concat "printf " (shell-quote-argument str)
           "| xdotool type --clearmodifiers --file - --delay "
           (number-to-string password-store-completion-delay)))
+
+(defun password-store-completion--get-xvkbd-text-command (str)
+  "Return an `xvkbd' command to type STR."
+  (concat "xvkbd -text "
+          (shell-quote-argument str)
+          " -delay "
+          (number-to-string password-store-completion-delay)
+          " > /dev/null 2>&1"))
+
+(defun password-store-completion--get-type-command (str)
+  "Return a command to type STR."
+  (pcase (password-store-completion--text-backend)
+    ('xvkbd (password-store-completion--get-xvkbd-text-command str))
+    (_ (password-store-completion--get-xdotool-type-command str))))
 
 (defun password-store-completion--get-wait-command (&optional milliseconds)
   "Return a command to sleep for MILLISECONDS.
